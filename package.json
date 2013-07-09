@@ -8,7 +8,9 @@
   },
   "dependencies":{
      "commander": "*",
-     "cheerio": "*"
+     "cheerio": "*",
+     "restler": "*",
+     "request": "*" 
   },      
   "author": "Minz",
   "license": "BSD"

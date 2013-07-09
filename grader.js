@@ -23,6 +23,8 @@ References:
 var fs = require('fs');
 var program = require('commander');
 var cheerio = require('cheerio');
+var request = require('request');
+var rest = require('restler');
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
 
@@ -32,7 +34,7 @@ var assertFileExists = function(infile) {
 	console.log("%s does not exist. Exiting.", instr);
 	process.exit(1); //http://nodejs.org/api/process.html#process_process_exit_code
     }
-    return inst;
+    return instr;
 };
 
 var cheerioHtmlFile = function(htmlfile) {
@@ -40,7 +42,8 @@ var cheerioHtmlFile = function(htmlfile) {
 };
 
 var loadChecks = function(checksfile) {
-    return JSON.parse(fs.readFileSync(checksfile));
+     checksfile = checksfile || CHECKSFILE_DEFAULT;
+     return JSON.parse(fs.readFileSync(checksfile));
 };
 
 var checkHtmlFile = function(htmlfile,checksfile) {
@@ -61,8 +64,27 @@ var clone = function(fn) {
 };
 
 if(require.main == module) {
-    program.option('-c, --checks <check_file>', 'Path to checks.json', assertFileExists, CHECKSFILE_DEFAULT).option('-f, --file <html_file>', 'Path to index.html', assertFileExists, HTMLFILE_DEFAULT).parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
+    program
+	.option('-c, --checks <check_file>', 'Path to checks.json', assertFileExists, CHECKSFILE_DEFAULT)
+	.option('-f, --file <html_file>', 'Path to index.html', assertFileExists, HTMLFILE_DEFAULT)
+        .option('u, --url <page_url>', 'Link to webpage')
+	.parse(process.argv);
+    var res = {};
+    var checkJson; 
+    if(program.file){
+        checkJson = checkHtmlFile(program.file, program.checks);
+    }else {
+	var url = program.url;
+	request(url, function(error,response,body){
+	    $ = cheerio.load(body);
+	    var checks = loadChecks(program.checks).sort();
+	    for(var c in checks){
+		var here = $(checks[c]).length > 0;
+	        res[checks[c]] = here;
+	    }	
+        });
+	checkJson = res;
+    }	
     var outJson = JSON.stringify(checkJson,null,4);
     console.log(outJson);
 }else {
